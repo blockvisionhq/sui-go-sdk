@@ -21,6 +21,11 @@ type Transaction struct {
 	Signer          *signer.Signer
 	SponsoredSigner *signer.Signer
 	SuiClient       *sui.Client
+
+	// KeypairSigner and KeypairSponsoredSigner enable non-Ed25519 signing
+	// without changing the original Signer fields or setters.
+	KeypairSigner          signer.Keypair
+	KeypairSponsoredSigner signer.Keypair
 }
 
 func NewTransaction() *Transaction {
@@ -39,14 +44,57 @@ func NewTransaction() *Transaction {
 
 func (tx *Transaction) SetSigner(signer *signer.Signer) *Transaction {
 	tx.Signer = signer
+	tx.KeypairSigner = nil
 
 	return tx
 }
 
 func (tx *Transaction) SetSponsoredSigner(signer *signer.Signer) *Transaction {
 	tx.SponsoredSigner = signer
+	tx.KeypairSponsoredSigner = nil
 
 	return tx
+}
+
+// SetKeypairSigner configures a signer for any supported signature scheme.
+func (tx *Transaction) SetKeypairSigner(keypair signer.Keypair) *Transaction {
+	tx.KeypairSigner = keypair
+	if ed25519Signer, ok := keypair.(*signer.Signer); ok {
+		tx.Signer = ed25519Signer
+		tx.KeypairSigner = nil
+	} else {
+		tx.Signer = nil
+	}
+
+	return tx
+}
+
+// SetKeypairSponsoredSigner configures a sponsor for any supported signature
+// scheme.
+func (tx *Transaction) SetKeypairSponsoredSigner(keypair signer.Keypair) *Transaction {
+	tx.KeypairSponsoredSigner = keypair
+	if ed25519Signer, ok := keypair.(*signer.Signer); ok {
+		tx.SponsoredSigner = ed25519Signer
+		tx.KeypairSponsoredSigner = nil
+	} else {
+		tx.SponsoredSigner = nil
+	}
+
+	return tx
+}
+
+func (tx *Transaction) activeSigner() signer.Keypair {
+	if tx.Signer != nil {
+		return tx.Signer
+	}
+	return tx.KeypairSigner
+}
+
+func (tx *Transaction) activeSponsoredSigner() signer.Keypair {
+	if tx.SponsoredSigner != nil {
+		return tx.SponsoredSigner
+	}
+	return tx.KeypairSponsoredSigner
 }
 
 func (tx *Transaction) SetSuiClient(client *sui.Client) *Transaction {
@@ -326,7 +374,8 @@ func (tx *Transaction) Pure(input any) Argument {
 // Unlike Execute, this method does NOT require gas payment to be set when
 // DoGasSelection will be true on the gRPC SimulateTransaction call.
 func (tx *Transaction) BuildBCSBytes(ctx context.Context) ([]byte, error) {
-	if tx.Signer == nil {
+	account := tx.activeSigner()
+	if account == nil {
 		return nil, ErrSignerNotSet
 	}
 
@@ -342,13 +391,13 @@ func (tx *Transaction) BuildBCSBytes(ctx context.Context) ([]byte, error) {
 		}
 	}
 	tx.SetGasBudgetIfNotSet(defaultGasBudget)
-	tx.SetSenderIfNotSet(models.SuiAddress(tx.Signer.Address))
+	tx.SetSenderIfNotSet(models.SuiAddress(account.GetAddress()))
 
 	if tx.Data.V1.Sender == nil {
 		return nil, ErrSenderNotSet
 	}
 	if tx.Data.V1.GasData.Owner == nil {
-		tx.SetGasOwner(models.SuiAddress(tx.Signer.Address))
+		tx.SetGasOwner(models.SuiAddress(account.GetAddress()))
 	}
 	// DoGasSelection on the gRPC side replaces the payment at execution time,
 	// but the node still needs to fully parse the BCS bytes first.
@@ -386,23 +435,24 @@ func (tx *Transaction) ToSuiExecuteTransactionBlockRequest(
 	options models.SuiTransactionBlockOptions,
 	requestType string,
 ) (*models.SuiExecuteTransactionBlockRequest, error) {
-	if tx.Signer == nil {
+	account := tx.activeSigner()
+	if account == nil {
 		return nil, ErrSignerNotSet
 	}
 
-	b64TxBytes, err := tx.buildTransaction(ctx)
+	b64TxBytes, err := tx.BuildTransaction(ctx)
 	if err != nil {
 		return nil, err
 	}
 	var signatures []string
-	if tx.SponsoredSigner != nil {
-		sponsoredMessage, err := tx.SponsoredSigner.SignMessage(b64TxBytes, constant.TransactionDataIntentScope)
+	if sponsor := tx.activeSponsoredSigner(); sponsor != nil {
+		sponsoredMessage, err := sponsor.SignMessage(b64TxBytes, constant.TransactionDataIntentScope)
 		if err != nil {
 			return nil, err
 		}
 		signatures = append(signatures, sponsoredMessage.Signature)
 	}
-	message, err := tx.Signer.SignMessage(b64TxBytes, constant.TransactionDataIntentScope)
+	message, err := account.SignMessage(b64TxBytes, constant.TransactionDataIntentScope)
 	if err != nil {
 		return nil, err
 	}
@@ -416,8 +466,9 @@ func (tx *Transaction) ToSuiExecuteTransactionBlockRequest(
 	}, nil
 }
 
-func (tx *Transaction) buildTransaction(ctx context.Context) (string, error) {
-	if tx.Signer == nil {
+func (tx *Transaction) BuildTransaction(ctx context.Context) (string, error) {
+	account := tx.activeSigner()
+	if account == nil {
 		return "", ErrSignerNotSet
 	}
 
@@ -431,26 +482,25 @@ func (tx *Transaction) buildTransaction(ctx context.Context) (string, error) {
 		}
 	}
 	tx.SetGasBudgetIfNotSet(defaultGasBudget)
-	tx.SetSenderIfNotSet(models.SuiAddress(tx.Signer.Address))
+	tx.SetSenderIfNotSet(models.SuiAddress(account.GetAddress()))
 
 	return tx.build(false)
 }
 
 func (tx *Transaction) build(onlyTransactionKind bool) (string, error) {
 	if onlyTransactionKind {
-		bcsEncodedMsg, err := tx.Data.V1.Kind.Marshal()
-		if err != nil {
-			return "", err
-		}
-		bcsBase64 := mystenbcs.ToBase64(bcsEncodedMsg)
-		return bcsBase64, nil
+		return tx.Data.V1.Kind.Build()
 	}
 
 	if tx.Data.V1.Sender == nil {
 		return "", ErrSenderNotSet
 	}
 	if tx.Data.V1.GasData.Owner == nil {
-		tx.SetGasOwner(models.SuiAddress(tx.Signer.Address))
+		account := tx.activeSigner()
+		if account == nil {
+			return "", ErrSignerNotSet
+		}
+		tx.SetGasOwner(models.SuiAddress(account.GetAddress()))
 	}
 	if !tx.Data.V1.GasData.IsAllSet() {
 		return "", ErrGasDataNotAllSet
@@ -463,6 +513,22 @@ func (tx *Transaction) build(onlyTransactionKind bool) (string, error) {
 	bcsBase64 := mystenbcs.ToBase64(bcsEncodedMsg)
 
 	return bcsBase64, nil
+}
+
+func ParseTransactionKind(bcsBase64 string) (*Transaction, error) {
+	bcsBytes, err := mystenbcs.FromBase64(bcsBase64)
+	if err != nil {
+		return nil, err
+	}
+	var txData TransactionKind
+	_, err = mystenbcs.Unmarshal(bcsBytes, &txData)
+	if err != nil {
+		return nil, err
+	}
+	tx := NewTransaction()
+	tx.Data.V1.Kind = &txData
+
+	return tx, nil
 }
 
 func (tx *Transaction) NewTransactionFromKind() (newTx *Transaction, err error) {

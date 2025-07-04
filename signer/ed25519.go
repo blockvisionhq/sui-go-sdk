@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto"
 	"crypto/ed25519"
+	"crypto/rand"
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
@@ -24,6 +25,10 @@ const (
 	DerivationPathEd25519   = `m/44'/784'/0'/0'/0'`
 	DerivationPathSecp256k1 = `m/54'/784'/0'/0/0`
 )
+
+const SigFlagEd25519 = 0x00
+
+type Ed25519Signer Signer
 
 type Signer struct {
 	PriKey  ed25519.PrivateKey
@@ -81,9 +86,16 @@ func NewSignertWithMnemonic(mnemonic string) (*Signer, error) {
 	return NewSigner(key.Key), nil
 }
 
-type SignedMessageSerializedSig struct {
-	Message   string `json:"message"`
-	Signature string `json:"signature"`
+func (s *Signer) GetAddress() string {
+	return s.Address
+}
+
+func (s *Signer) Schema() byte {
+	return byte(0x0)
+}
+
+func (s *Signer) PublicKeyBytes() []byte {
+	return s.PubKey
 }
 
 func (s *Signer) SignMessage(data string, scope constant.IntentScope) (*SignedMessageSerializedSig, error) {
@@ -101,6 +113,17 @@ func (s *Signer) SignMessage(data string, scope constant.IntentScope) (*SignedMe
 		Signature: models.ToSerializedSignature(sigBytes, s.PriKey.Public().(ed25519.PublicKey)),
 	}
 	return ret, nil
+}
+
+func (s *Signer) Sign(message []byte) ([]byte, error) {
+	digest := blake2b.Sum256(message)
+	var noHash crypto.Hash
+	sig, err := s.PriKey.Sign(rand.Reader, digest[:], noHash)
+	if err != nil {
+		return nil, err
+	}
+
+	return sig, nil
 }
 
 func (s *Signer) SignTransaction(b64TxBytes string) (*models.SignedTransactionSerializedSig, error) {

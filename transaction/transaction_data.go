@@ -142,6 +142,15 @@ func (tk *TransactionKind) Marshal() ([]byte, error) {
 	return bcsEncodedMsg.Bytes(), nil
 }
 
+func (tk *TransactionKind) Build() (string, error) {
+	bcsEncodedMsg, err := tk.Marshal()
+	if err != nil {
+		return "", err
+	}
+	bcsBase64 := mystenbcs.ToBase64(bcsEncodedMsg)
+	return bcsBase64, nil
+}
+
 // CallArg https://github.com/MystenLabs/sui/blob/fb27c6c7166f5e4279d5fd1b2ebc5580ca0e81b2/crates/sui-types/src/transaction.rs#L80
 // - Pure
 // - Object
