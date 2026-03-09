@@ -18,10 +18,11 @@ type CoinLockedBalance struct {
 }
 
 type CoinBalanceResponse struct {
-	CoinType        string            `json:"coinType"`
-	CoinObjectCount uint64            `json:"coinObjectCount"`
-	TotalBalance    string            `json:"totalBalance"`
-	LockedBalance   CoinLockedBalance `json:"lockedBalance"`
+	CoinType              string            `json:"coinType"`
+	CoinObjectCount       uint64            `json:"coinObjectCount"`
+	TotalBalance          string            `json:"totalBalance"`
+	LockedBalance         CoinLockedBalance `json:"lockedBalance"`
+	FundsInAddressBalance string            `json:"fundsInAddressBalance"`
 }
 
 type CoinAllBalanceResponse []CoinBalanceResponse
