@@ -58,7 +58,6 @@ func IsFieldNonEmpty(v interface{}, fieldName string) bool {
 }
 
 // GetTxDigest get transaction digest from tx bytes in base64
-// go version of https://github.com/MystenLabs/sui/blob/main/sdk/typescript/src/transactions/TransactionData.ts
 func GetTxDigest(txBytesB64 string) (string, error) {
 
 	txBytes, err := base64.StdEncoding.DecodeString(txBytesB64)

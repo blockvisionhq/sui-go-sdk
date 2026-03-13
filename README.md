@@ -14,6 +14,12 @@ The Sui-Go-SDK aims to offer access to all Sui RPC methods with Golang and also 
 
 > Check this [doc](https://docs.blockvision.org/reference/grpc-for-sui) to get your API Key and tutorials for Sui gRPC integration.
 
+### V2 Client (Recommended)
+
+We now offer a v2 client (`sui/v2`) with a unified API that works with both JSON-RPC and gRPC backends. Use the same request/response types regardless of transport—switch between JSON-RPC and gRPC by changing client options only.
+
+See the [V2 README](sui/v2/README.md) for design goals, usage examples, and compatibility notes.
+
 ### Features
 
 + Support the mainstream methods in the Object, Coin, Event, Read Transaction Blocks, System Data, and Write Transaction

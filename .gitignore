@@ -11,3 +11,8 @@ sui.keystore.fortest
 /vendor/
 .Ds_Store
 .history/
+consistency/
+grpc_examples/ledger_service/grpcweb.go
+grpc_examples/state_service/grpcweb.go
+json_response/
+v2_examples/

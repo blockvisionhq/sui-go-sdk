@@ -25,7 +25,7 @@ func main() {
 		log.Fatalf("Failed to get ledger service: %v", err)
 	}
 
-	//Run all examples
+	// Run all examples
 	fmt.Println("\n1. Getting service info...")
 	exampleGetServiceInfo(ctx, ledgerService)
 
