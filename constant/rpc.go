@@ -4,7 +4,7 @@ const (
 	BvTestnetEndpoint  = "https://sui-testnet-endpoint.blockvision.org"
 	BvMainnetEndpoint  = "https://sui-mainnet-endpoint.blockvision.org"
 	SuiTestnetEndpoint = "https://fullnode.testnet.sui.io"
-	SuiMainnetEndpoint = "https://sui-mainnet.blockvision.org/v1/2ywDObLMSfu8E0464tnaucGOU3d"
+	SuiMainnetEndpoint = "https://sui-mainnet.blockvision.org/v1/YOUR_API_KEY"
 
 	WssBvTestnetEndpoint  = "wss://sui-testnet-endpoint.blockvision.org/websocket"
 	WssBvMainnetEndpoint  = "wss://sui-mainnet-endpoint.blockvision.org/websocket"
@@ -16,7 +16,7 @@ const (
 	FaucetLocalnetEndpoint = "http://127.0.0.1:9123/gas"
 
 	SuiMainnetGrpcEndpoint = "sui-mainnet-grpc.blockvision.org:443"
-	SuiMainnetGrpcToken    = "2ywDObLMSfu8E0464tnaucGOU3d"
+	SuiMainnetGrpcToken    = "YOUR_API_KEY"
 )
 
 const (

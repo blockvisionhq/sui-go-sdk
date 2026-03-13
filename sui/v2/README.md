@@ -166,7 +166,7 @@ Run with gRPC:
 
 ```shell
 V2_TRANSPORT=grpc \
-BLOCKVISION_API_KEY=your_api_key \
+BLOCKVISION_API_KEY=YOUR_API_KEY \
 go run ./v2_examples
 ```
 
