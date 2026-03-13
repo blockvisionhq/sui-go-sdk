@@ -152,8 +152,9 @@ type SuiMoveNormalizedStruct struct {
 }
 
 type SuiMoveNormalizedFunction struct {
-	Visibility interface{}   `json:"visibility"`
-	IsEntry    bool          `json:"isEntry"`
-	Parameters []interface{} `json:"parameters"`
-	Return_    []interface{} `json:"return_"`
+	Visibility     interface{}   `json:"visibility"`
+	IsEntry        bool          `json:"isEntry"`
+	TypeParameters []interface{} `json:"typeParameters"`
+	Parameters     []interface{} `json:"parameters"`
+	Return_        []interface{} `json:"return"`
 }

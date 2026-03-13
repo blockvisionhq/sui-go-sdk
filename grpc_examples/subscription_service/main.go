@@ -54,7 +54,7 @@ func exampleSubscribeCheckpoints(ctx context.Context, service v2.SubscriptionSer
 
 	// Listen for checkpoint updates
 	checkpointCount := 0
-	maxCheckpoints := 10 // Limit for demo purposes
+	maxCheckpoints := 1000 // Limit for demo purposes
 	for checkpointCount < maxCheckpoints {
 		checkpoint, err := stream.Recv()
 		if err != nil {

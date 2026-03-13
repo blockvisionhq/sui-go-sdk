@@ -1,0 +1,179 @@
+// Copyright (c) BlockVision, Inc. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+// Package v2 provides the Sui client v2 API. Types are re-exported from types.
+package v2
+
+import "github.com/block-vision/sui-go-sdk/sui/v2/types"
+
+// Re-export all types from types for backward compatibility
+type (
+	ErrorCode                      = types.ErrorCode
+	SDKError                       = types.SDKError
+	ObjectOwnerKind                = types.ObjectOwnerKind
+	ObjectOwner                    = types.ObjectOwner
+	SharedOwnerPayload             = types.SharedOwnerPayload
+	ConsensusOwnerPayload          = types.ConsensusOwnerPayload
+	ObjectInclude                  = types.ObjectInclude
+	Object                         = types.Object
+	Coin                           = types.Coin
+	GetObjectsOptions              = types.GetObjectsOptions
+	GetObjectsResponse             = types.GetObjectsResponse
+	ObjectOrError                  = types.ObjectOrError
+	ListOwnedObjectsOptions        = types.ListOwnedObjectsOptions
+	ListOwnedObjectsResponse       = types.ListOwnedObjectsResponse
+	ListCoinsOptions               = types.ListCoinsOptions
+	ListCoinsResponse              = types.ListCoinsResponse
+	DynamicFieldName               = types.DynamicFieldName
+	DynamicFieldValue              = types.DynamicFieldValue
+	DynamicFieldKind               = types.DynamicFieldKind
+	DynamicFieldEntry              = types.DynamicFieldEntry
+	DynamicField                   = types.DynamicField
+	ListDynamicFieldsOptions       = types.ListDynamicFieldsOptions
+	ListDynamicFieldsResponse      = types.ListDynamicFieldsResponse
+	GetDynamicFieldOptions         = types.GetDynamicFieldOptions
+	GetDynamicFieldResponse        = types.GetDynamicFieldResponse
+	Balance                        = types.Balance
+	GetBalanceOptions              = types.GetBalanceOptions
+	GetBalanceResponse             = types.GetBalanceResponse
+	ListBalancesOptions            = types.ListBalancesOptions
+	ListBalancesResponse           = types.ListBalancesResponse
+	CoinMetadata                   = types.CoinMetadata
+	GetCoinMetadataOptions         = types.GetCoinMetadataOptions
+	GetCoinMetadataResponse        = types.GetCoinMetadataResponse
+	ExecutionStatus                = types.ExecutionStatus
+	ExecutionErrorKind             = types.ExecutionErrorKind
+	ExecutionError                 = types.ExecutionError
+	MoveAbort                      = types.MoveAbort
+	MoveLocation                   = types.MoveLocation
+	CleverError                    = types.CleverError
+	SizeError                      = types.SizeError
+	CommandArgumentError           = types.CommandArgumentError
+	TypeArgumentError              = types.TypeArgumentError
+	PackageUpgradeError            = types.PackageUpgradeError
+	IndexError                     = types.IndexError
+	CoinDenyListError              = types.CoinDenyListError
+	CongestedObjects               = types.CongestedObjects
+	ObjectIdError                  = types.ObjectIdError
+	GasCostSummary                 = types.GasCostSummary
+	ChangedObjectInputState        = types.ChangedObjectInputState
+	ChangedObjectOutputState       = types.ChangedObjectOutputState
+	ChangedObjectIdOperation       = types.ChangedObjectIdOperation
+	ChangedObject                  = types.ChangedObject
+	UnchangedConsensusObjectKind   = types.UnchangedConsensusObjectKind
+	UnchangedConsensusObject       = types.UnchangedConsensusObject
+	TransactionEffects             = types.TransactionEffects
+	Event                          = types.Event
+	BalanceChange                  = types.BalanceChange
+	TransactionInclude             = types.TransactionInclude
+	SimulateTransactionInclude     = types.SimulateTransactionInclude
+	CommandOutput                  = types.CommandOutput
+	CommandResult                  = types.CommandResult
+	TransactionData                = types.TransactionData
+	GasData                        = types.GasData
+	ObjectRef                      = types.ObjectRef
+	TransactionExpiration          = types.TransactionExpiration
+	NoExpiration                   = types.NoExpiration
+	EpochExpiration                = types.EpochExpiration
+	Command                        = types.Command
+	MoveCallCommand                = types.MoveCallCommand
+	TransferObjectsCmd             = types.TransferObjectsCmd
+	SplitCoinsCmd                  = types.SplitCoinsCmd
+	MergeCoinsCmd                  = types.MergeCoinsCmd
+	PublishCmd                     = types.PublishCmd
+	MakeMoveVectorCmd              = types.MakeMoveVectorCmd
+	UpgradeCmd                     = types.UpgradeCmd
+	Argument                       = types.Argument
+	GasCoinArg                     = types.GasCoinArg
+	InputArg                       = types.InputArg
+	ResultArg                      = types.ResultArg
+	Input                          = types.Input
+	PureBCSInput                   = types.PureBCSInput
+	PureU8Input                    = types.PureU8Input
+	PureU16Input                   = types.PureU16Input
+	PureU32Input                   = types.PureU32Input
+	PureU64Input                   = types.PureU64Input
+	PureU128Input                  = types.PureU128Input
+	PureU256Input                  = types.PureU256Input
+	PureBoolInput                  = types.PureBoolInput
+	PureAddressInput               = types.PureAddressInput
+	PureStringInput                = types.PureStringInput
+	PureObjectIdInput              = types.PureObjectIdInput
+	PureVecInput                   = types.PureVecInput
+	PureOptionInput                = types.PureOptionInput
+	PureLiteralInput               = types.PureLiteralInput
+	SharedObjectInput              = types.SharedObjectInput
+	ImmutableOrOwnedInput          = types.ImmutableOrOwnedInput
+	ReceivingInput                 = types.ReceivingInput
+	Transaction                    = types.Transaction
+	TransactionResult              = types.TransactionResult
+	SimulateTransactionResult      = types.SimulateTransactionResult
+	GetTransactionOptions          = types.GetTransactionOptions
+	ExecuteTransactionOptions      = types.ExecuteTransactionOptions
+	SimulateTransactionOptions     = types.SimulateTransactionOptions
+	SystemParameters               = types.SystemParameters
+	StorageFund                    = types.StorageFund
+	StakeSubsidy                   = types.StakeSubsidy
+	SystemStateInfo                = types.SystemStateInfo
+	GetCurrentSystemStateResponse  = types.GetCurrentSystemStateResponse
+	GetReferenceGasPriceResponse   = types.GetReferenceGasPriceResponse
+	GetChainIdentifierResponse     = types.GetChainIdentifierResponse
+	ZkLoginIntentScope             = types.ZkLoginIntentScope
+	VerifyZkLoginSignatureOptions  = types.VerifyZkLoginSignatureOptions
+	ZkLoginVerifyResponse          = types.ZkLoginVerifyResponse
+	DefaultNameServiceNameOptions  = types.DefaultNameServiceNameOptions
+	DefaultNameServiceNameData     = types.DefaultNameServiceNameData
+	DefaultNameServiceNameResponse = types.DefaultNameServiceNameResponse
+	Visibility                     = types.Visibility
+	Ability                        = types.Ability
+	TypeParameter                  = types.TypeParameter
+	ReferenceType                  = types.ReferenceType
+	OpenSignatureBodyKind          = types.OpenSignatureBodyKind
+	OpenSignatureBody              = types.OpenSignatureBody
+	DatatypeSignature              = types.DatatypeSignature
+	OpenSignature                  = types.OpenSignature
+	FieldDescriptor                = types.FieldDescriptor
+	VariantDescriptor              = types.VariantDescriptor
+	DatatypeKind                   = types.DatatypeKind
+	DatatypeResponse               = types.DatatypeResponse
+	FunctionResponse               = types.FunctionResponse
+	GetMoveFunctionOptions         = types.GetMoveFunctionOptions
+	GetMoveFunctionResponse        = types.GetMoveFunctionResponse
+)
+
+// Re-export constants
+const (
+	ErrorCodeInvalidConfig            = types.ErrorCodeInvalidConfig
+	ErrorCodeNotFound                 = types.ErrorCodeNotFound
+	ErrorCodeTransport                = types.ErrorCodeTransport
+	ObjectOwnerKindAddress            = types.ObjectOwnerKindAddress
+	ObjectOwnerKindObject             = types.ObjectOwnerKindObject
+	ObjectOwnerKindShared             = types.ObjectOwnerKindShared
+	ObjectOwnerKindImmutable          = types.ObjectOwnerKindImmutable
+	ObjectOwnerKindConsensusAddress   = types.ObjectOwnerKindConsensusAddress
+	ObjectOwnerKindUnknown            = types.ObjectOwnerKindUnknown
+	DynamicFieldKindDynamicField      = types.DynamicFieldKindDynamicField
+	DynamicFieldKindDynamicObject     = types.DynamicFieldKindDynamicObject
+	SUI_TYPE_ARG                      = types.SUI_TYPE_ARG
+	ZkLoginIntentScopeTransactionData = types.ZkLoginIntentScopeTransactionData
+	ZkLoginIntentScopePersonalMessage = types.ZkLoginIntentScopePersonalMessage
+	VisibilityPublic                  = types.VisibilityPublic
+	VisibilityFriend                  = types.VisibilityFriend
+	VisibilityPrivate                 = types.VisibilityPrivate
+	VisibilityUnknown                 = types.VisibilityUnknown
+	AbilityCopy                       = types.AbilityCopy
+	AbilityDrop                       = types.AbilityDrop
+	AbilityStore                      = types.AbilityStore
+	AbilityKey                        = types.AbilityKey
+	AbilityUnknown                    = types.AbilityUnknown
+)
+
+var (
+	ErrBackendRequired         = types.ErrBackendRequired
+	ErrClientRequired          = types.ErrBackendRequired
+	ErrGrpcClientRequired      = types.ErrGrpcClientRequired
+	ErrHttpConnRequired        = types.ErrHttpConnRequired
+	ErrTransactionNotFound     = types.ErrTransactionNotFound
+	ErrSystemStateNotFound     = types.ErrSystemStateNotFound
+	ErrChainIdentifierNotFound = types.ErrChainIdentifierNotFound
+)

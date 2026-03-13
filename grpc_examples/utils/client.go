@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"crypto/tls"
 	"time"
 
 	"github.com/block-vision/sui-go-sdk/common/grpcconn"
@@ -36,9 +35,7 @@ func CreateGrpcClient(config *DefaultConfig) *grpcconn.SuiGrpcClient {
 
 	if config.UseTLS {
 		opts = append(opts, grpcconn.WithDialOptions(
-			grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{
-				InsecureSkipVerify: true,
-			})),
+			grpc.WithTransportCredentials(credentials.NewTLS(nil)),
 			grpc.WithMaxMsgSize(20*1024*1024), // 20MB
 		))
 	} else {

@@ -5,6 +5,7 @@ package sui
 
 import (
 	"context"
+
 	"github.com/block-vision/sui-go-sdk/common/httpconn"
 	"github.com/block-vision/sui-go-sdk/models"
 	"github.com/block-vision/sui-go-sdk/utils"

@@ -4,8 +4,9 @@
 package sui
 
 import (
-	"github.com/block-vision/sui-go-sdk/common/httpconn"
 	"net/http"
+
+	"github.com/block-vision/sui-go-sdk/common/httpconn"
 )
 
 // ISuiAPI defines the SuiAPI related interface, and then implement it by the client.
