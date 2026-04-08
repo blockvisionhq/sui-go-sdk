@@ -932,7 +932,11 @@ type ExecuteTransactionOptions struct {
 type SimulateTransactionOptions struct {
 	// BCS-encoded transaction bytes.
 	Transaction []byte                     `json:"transaction"`
-	Include     SimulateTransactionInclude `json:"include,omitempty"`
+	// DoGasSelection instructs the node to automatically select gas objects.
+	// Set to true when simulating without a pre-funded gas payment (e.g. dry-run
+	// before you know which coin to use). Only honoured by the gRPC backend.
+	DoGasSelection bool                       `json:"doGasSelection,omitempty"`
+	Include        SimulateTransactionInclude `json:"include,omitempty"`
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

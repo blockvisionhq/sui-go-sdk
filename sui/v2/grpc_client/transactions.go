@@ -80,7 +80,7 @@ func (c *Client) SimulateTransaction(ctx context.Context, options SimulateTransa
 		return nil, wrapTransportError("SimulateTransaction", "TransactionExecutionService", err)
 	}
 
-	doGasSelection := false
+	doGasSelection := options.DoGasSelection
 	resp, err := execService.SimulateTransaction(ctx, &v2proto.SimulateTransactionRequest{
 		Transaction:    &v2proto.Transaction{Bcs: &v2proto.Bcs{Value: options.Transaction}},
 		DoGasSelection: &doGasSelection,
@@ -140,12 +140,34 @@ func buildTxReadMaskPaths(include TransactionInclude) []string {
 	return paths
 }
 
+// buildSimulateTxReadMaskPaths returns ReadMask paths for SimulateTransaction.
+// Unlike GetTransaction/ExecuteTransaction, simulated transactions are never
+// committed to the chain, so digest, signatures, checkpoint, and timestamp are
+// never populated. Requesting them causes the node to return a nil transaction.
 func buildSimulateTxReadMaskPaths(include SimulateTransactionInclude) []string {
-	base := buildTxReadMaskPaths(include.TransactionInclude)
-	if include.CommandResults {
-		base = append(base, "command_outputs")
+	// Always request effects.status so callers can tell if simulation succeeded.
+	paths := []string{"transaction.effects.status", "transaction.effects.gas_used"}
+
+	if include.Effects {
+		paths = append(paths, "transaction.effects")
 	}
-	return base
+	if include.Events {
+		paths = append(paths, "transaction.events")
+	}
+	if include.Transaction {
+		paths = append(paths,
+			"transaction.transaction.sender",
+			"transaction.transaction.gas_payment",
+			"transaction.transaction.kind",
+		)
+	}
+	if include.BalanceChanges {
+		paths = append(paths, "transaction.balance_changes")
+	}
+	if include.CommandResults {
+		paths = append(paths, "command_outputs")
+	}
+	return paths
 }
 
 // ─── gRPC → v2 type converters ────────────────────────────────────────────────

@@ -12,13 +12,16 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/block-vision/sui-go-sdk/common/grpcconn"
 	"github.com/block-vision/sui-go-sdk/common/httpconn"
 	"github.com/block-vision/sui-go-sdk/constant"
+	suisigner "github.com/block-vision/sui-go-sdk/signer"
 	suiv2 "github.com/block-vision/sui-go-sdk/sui/v2"
+	"github.com/block-vision/sui-go-sdk/transaction"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 )
@@ -38,6 +41,7 @@ const (
 	ListDynamicFields      = "ListDynamicFields"
 	GetMoveFunction        = "GetMoveFunction"
 	DefaultNameServiceName = "DefaultNameServiceName"
+	SimulateTransaction    = "SimulateTransaction"
 )
 
 var supportedMethods = []string{
@@ -54,6 +58,7 @@ var supportedMethods = []string{
 	ListDynamicFields,
 	GetMoveFunction,
 	DefaultNameServiceName,
+	SimulateTransaction,
 }
 
 const (
@@ -123,6 +128,7 @@ func main() {
 	runMethod(ListDynamicFields, func() { exampleListDynamicFields(ctx, client) })
 	runMethod(GetMoveFunction, func() { exampleGetMoveFunction(ctx, client) })
 	runMethod(DefaultNameServiceName, func() { exampleDefaultNameServiceName(ctx, client) })
+	runMethod(SimulateTransaction, func() { exampleSimulateTransaction(ctx, client) })
 }
 
 func createClientFromEnv() (suiv2.Client, func(), string, error) {
@@ -432,4 +438,95 @@ func exampleDefaultNameServiceName(ctx context.Context, c suiv2.Client) {
 		return
 	}
 	printOK("DefaultNameServiceName", *resp.Data.Name)
+}
+
+// exampleSimulateTransaction demonstrates how to simulate (dry-run) a transaction
+// via the v2 client without submitting it on-chain.
+//
+// Key points:
+//   - Use tx.BuildBCSBytes(ctx) to get the raw BCS bytes; do NOT use
+//     json.Marshal or tx.Data.V1.Kind.Marshal() (those produce the wrong format).
+//   - Set DoGasSelection: true so the node selects a gas coin automatically.
+//     Without this, the BCS-encoded transaction must include a valid GasPayment,
+//     which is the source of "invalid length 0" / "unexpected end of input" errors.
+//   - The SIMULATE_PRIVATE_KEY env var must be a suiprivkey1... bech32-encoded key.
+//     The account must hold some SUI (testnet/devnet) for gas selection to succeed.
+func exampleSimulateTransaction(ctx context.Context, c suiv2.Client) {
+	privKey := os.Getenv("SIMULATE_PRIVATE_KEY")
+	if privKey == "" {
+		fmt.Println("  SKIP SimulateTransaction: set SIMULATE_PRIVATE_KEY to run this example")
+		return
+	}
+
+	s, err := suisigner.NewSignerWithSecretKey(privKey)
+	if err != nil {
+		printErr("SimulateTransaction/NewSigner", err)
+		return
+	}
+
+	// Fetch reference gas price from the node.
+	gasPriceResp, err := c.GetReferenceGasPrice(ctx)
+	if err != nil {
+		printErr("SimulateTransaction/GetReferenceGasPrice", err)
+		return
+	}
+	gasPrice, err := strconv.ParseUint(gasPriceResp.ReferenceGasPrice, 10, 64)
+	if err != nil {
+		printErr("SimulateTransaction/ParseGasPrice", err)
+		return
+	}
+
+	// Build a simple SUI transfer PTB.
+	tx := transaction.NewTransaction()
+	tx.SetSigner(s)
+	tx.SetGasPrice(gasPrice)
+
+	coin := tx.Gas()
+	splitAmt := tx.Pure(uint64(1_000_000)) // 0.001 SUI
+	splitResult := tx.SplitCoins(coin, []transaction.Argument{splitAmt})
+	tx.TransferObjects(
+		[]transaction.Argument{splitResult},
+		tx.Pure(s.Address),
+	)
+
+	// BuildBCSBytes resolves sender + gas price + gas budget and returns raw BCS.
+	// Gas payment is intentionally left unset; DoGasSelection handles it.
+	bcsBytes, err := tx.BuildBCSBytes(ctx)
+	if err != nil {
+		printErr("SimulateTransaction/BuildBCSBytes", err)
+		return
+	}
+
+	resp, err := c.SimulateTransaction(ctx, suiv2.SimulateTransactionOptions{
+		Transaction:    bcsBytes,
+		DoGasSelection: true,
+		Include: suiv2.SimulateTransactionInclude{
+			TransactionInclude: suiv2.TransactionInclude{
+				Effects: true,
+				Events:  true,
+			},
+		},
+	})
+	if err != nil {
+		printErr("SimulateTransaction", err)
+		return
+	}
+
+	tx2 := resp.Transaction
+	if tx2 == nil {
+		fmt.Println("  OK  SimulateTransaction: no transaction payload returned")
+		return
+	}
+	statusStr := "success"
+	if !tx2.Status.Success {
+		statusStr = fmt.Sprintf("failure: %+v", tx2.Status.Error)
+	}
+	fmt.Printf("  OK  SimulateTransaction: status=%s\n", statusStr)
+	if tx2.Effects != nil {
+		fmt.Printf("      gasUsed: computation=%s  storage=%s  rebate=%s\n",
+			tx2.Effects.GasUsed.ComputationCost,
+			tx2.Effects.GasUsed.StorageCost,
+			tx2.Effects.GasUsed.StorageRebate,
+		)
+	}
 }
