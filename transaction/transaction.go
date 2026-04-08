@@ -319,6 +319,48 @@ func (tx *Transaction) Pure(input any) Argument {
 	return arg
 }
 
+// BuildBCSBytes resolves sender, gas price and gas budget (same as Execute),
+// then returns the raw BCS-encoded TransactionData bytes suitable for
+// SimulateTransactionOptions.Transaction or ExecuteTransactionOptions.Transaction.
+//
+// Unlike Execute, this method does NOT require gas payment to be set when
+// DoGasSelection will be true on the gRPC SimulateTransaction call.
+func (tx *Transaction) BuildBCSBytes(ctx context.Context) ([]byte, error) {
+	if tx.Signer == nil {
+		return nil, ErrSignerNotSet
+	}
+
+	if tx.Data.V1.GasData.Price == nil {
+		if tx.SuiClient != nil {
+			rsp, err := tx.SuiClient.SuiXGetReferenceGasPrice(ctx)
+			if err != nil {
+				return nil, err
+			}
+			tx.SetGasPrice(rsp)
+		} else {
+			return nil, ErrGasPriceNotSet
+		}
+	}
+	tx.SetGasBudgetIfNotSet(defaultGasBudget)
+	tx.SetSenderIfNotSet(models.SuiAddress(tx.Signer.Address))
+
+	if tx.Data.V1.Sender == nil {
+		return nil, ErrSenderNotSet
+	}
+	if tx.Data.V1.GasData.Owner == nil {
+		tx.SetGasOwner(models.SuiAddress(tx.Signer.Address))
+	}
+	// DoGasSelection on the gRPC side replaces the payment at execution time,
+	// but the node still needs to fully parse the BCS bytes first.
+	// An empty slice encodes as a valid BCS vector (0x00); a nil pointer does not.
+	if tx.Data.V1.GasData.Payment == nil {
+		empty := []SuiObjectRef{}
+		tx.Data.V1.GasData.Payment = &empty
+	}
+
+	return tx.Data.Marshal()
+}
+
 func (tx *Transaction) Execute(
 	ctx context.Context,
 	options models.SuiTransactionBlockOptions,
