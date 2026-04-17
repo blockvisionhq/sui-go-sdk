@@ -4,8 +4,18 @@ import (
 	"encoding/base64"
 	"github.com/block-vision/sui-go-sdk/common/sui_error"
 	"math"
+	"bytes"
+	"encoding/hex"
+	"fmt"
+	"log"
+	
 
 	"github.com/block-vision/sui-go-sdk/models"
+	"github.com/block-vision/sui-go-sdk/signer"
+	"github.com/tyler-smith/go-bip32"
+	"github.com/tyler-smith/go-bip39"
+	"golang.org/x/crypto/blake2b"
+	"golang.org/x/crypto/ed25519"
 )
 
 type KeyPair byte
@@ -61,4 +71,55 @@ func FetchKeyPair(value string) (models.SuiKeyPair, error) {
 	default:
 		return models.SuiKeyPair{}, sui_error.ErrInvalidEncryptFlag
 	}
+}
+
+func CreateNewKeyPair() {
+	// 1. Generate 24-word mnemonic
+	entropy, _ := bip39.NewEntropy(256)
+	mnemonic, _ := bip39.NewMnemonic(entropy)
+	fmt.Println("Mnemonic:", mnemonic)
+
+	// 2. Convert mnemonic to seed
+	seed := bip39.NewSeed(mnemonic, "")
+
+	// 3. SLIP-0010 Ed25519 master key
+	masterKey, err := bip32.NewMasterKey(seed)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// 4. Sui derivation path: m/44'/784'/0'/0'/0'
+	path := []uint32{
+		44 + bip32.FirstHardenedChild,
+		784 + bip32.FirstHardenedChild,
+		0 + bip32.FirstHardenedChild,
+		0 + bip32.FirstHardenedChild,
+		0 + bip32.FirstHardenedChild,
+	}
+
+	key := masterKey
+	for _, p := range path {
+		key, err = key.NewChildKey(p)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	// 5. Private key seed (32 bytes)
+	seed32 := key.Key
+
+	// 6. Generate Ed25519 keypair (correct Go version)
+	pub, priv, err := ed25519.GenerateKey(bytes.NewReader(seed32))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println("Private Key:", hex.EncodeToString(priv))
+	fmt.Println("Public Key :", hex.EncodeToString(pub))
+
+	// 7. Convert public key to Sui address
+	hash := blake2b.Sum256(pub)
+	address := "0x" + hex.EncodeToString(hash[:])
+	fmt.Println("Sui Address:", address)
+
 }
