@@ -20,7 +20,7 @@ type Transaction struct {
 	Data            TransactionData
 	Signer          *signer.Signer
 	SponsoredSigner *signer.Signer
-	SuiClient       *sui.Client
+	SuiClient       sui.ISuiAPI
 }
 
 func NewTransaction() *Transaction {
@@ -49,7 +49,7 @@ func (tx *Transaction) SetSponsoredSigner(signer *signer.Signer) *Transaction {
 	return tx
 }
 
-func (tx *Transaction) SetSuiClient(client *sui.Client) *Transaction {
+func (tx *Transaction) SetSuiClient(client sui.ISuiAPI) *Transaction {
 	tx.SuiClient = client
 
 	return tx
