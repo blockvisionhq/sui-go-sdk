@@ -12,6 +12,7 @@ sui.keystore.fortest
 .Ds_Store
 .history/
 consistency/
+CLAUDE.md
 grpc_examples/ledger_service/grpcweb.go
 grpc_examples/state_service/grpcweb.go
 json_response/

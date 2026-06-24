@@ -32,6 +32,7 @@ type Client interface {
 	GetObjects(ctx context.Context, options GetObjectsOptions) (*GetObjectsResponse, error)
 	ListOwnedObjects(ctx context.Context, options ListOwnedObjectsOptions) (*ListOwnedObjectsResponse, error)
 	GetTransaction(ctx context.Context, options GetTransactionOptions) (*TransactionResult, error)
+	BatchGetTransactions(ctx context.Context, options BatchGetTransactionsOptions) (*BatchGetTransactionsResponse, error)
 	ExecuteTransaction(ctx context.Context, options ExecuteTransactionOptions) (*TransactionResult, error)
 	SimulateTransaction(ctx context.Context, options SimulateTransactionOptions) (*SimulateTransactionResult, error)
 	ListDynamicFields(ctx context.Context, options ListDynamicFieldsOptions) (*ListDynamicFieldsResponse, error)

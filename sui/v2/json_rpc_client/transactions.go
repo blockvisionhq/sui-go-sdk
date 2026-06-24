@@ -42,6 +42,48 @@ func (c *Client) GetTransaction(ctx context.Context, options types.GetTransactio
 	return &types.TransactionResult{Transaction: tx}, nil
 }
 
+// BatchGetTransactions fetches multiple transactions by their digests in a single request.
+// The order of the returned Transactions matches the order of the request Digests.
+//
+// JSON-RPC's sui_multiGetTransactionBlocks is all-or-nothing: if any digest is not
+// found, the entire call errors out. The per-item TransactionOrError envelope is
+// preserved for API parity with the gRPC backend, but the JSON-RPC backend will
+// only ever populate Transaction (not Error) on success.
+func (c *Client) BatchGetTransactions(ctx context.Context, options types.BatchGetTransactionsOptions) (*types.BatchGetTransactionsResponse, error) {
+	if len(options.Digests) == 0 {
+		return &types.BatchGetTransactionsResponse{Transactions: []types.TransactionOrError{}}, nil
+	}
+
+	// Enable all options to mirror GetTransaction's behavior (rich response data).
+	opts := models.SuiTransactionBlockOptions{
+		ShowInput:          true,
+		ShowRawInput:       true,
+		ShowEffects:        true,
+		ShowEvents:         true,
+		ShowBalanceChanges: true,
+		ShowObjectChanges:  true,
+	}
+	params := []interface{}{options.Digests, opts}
+
+	var rsp []*models.SuiTransactionBlockResponse
+	if err := c.executeRequest(ctx, "sui_multiGetTransactionBlocks", params, &rsp); err != nil {
+		return nil, wrapTransportError("BatchGetTransactions", "sui_multiGetTransactionBlocks", err)
+	}
+
+	out := make([]types.TransactionOrError, len(rsp))
+	for i, item := range rsp {
+		if item == nil {
+			msg := "transaction response is nil"
+			out[i] = types.TransactionOrError{Error: &msg}
+			continue
+		}
+		tx := convertTxResponse(item, options.Include)
+		out[i] = types.TransactionOrError{Transaction: tx}
+	}
+
+	return &types.BatchGetTransactionsResponse{Transactions: out}, nil
+}
+
 // ExecuteTransaction submits a signed transaction for execution.
 func (c *Client) ExecuteTransaction(ctx context.Context, options types.ExecuteTransactionOptions) (*types.TransactionResult, error) {
 	txB64 := base64.StdEncoding.EncodeToString(options.Transaction)

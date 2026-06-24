@@ -111,6 +111,9 @@ type (
 	GetTransactionOptions          = types.GetTransactionOptions
 	ExecuteTransactionOptions      = types.ExecuteTransactionOptions
 	SimulateTransactionOptions     = types.SimulateTransactionOptions
+	BatchGetTransactionsOptions    = types.BatchGetTransactionsOptions
+	BatchGetTransactionsResponse   = types.BatchGetTransactionsResponse
+	TransactionOrError             = types.TransactionOrError
 	SystemParameters               = types.SystemParameters
 	StorageFund                    = types.StorageFund
 	StakeSubsidy                   = types.StakeSubsidy
