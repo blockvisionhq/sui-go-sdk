@@ -27,6 +27,15 @@ func NewSuiGrpcClient(target string, opts ...GrpcConnOption) *SuiGrpcClient {
 	}
 }
 
+// NewSuiGrpcClientFromConn builds a SuiGrpcClient over an externally-owned
+// *grpc.ClientConn. The caller retains ownership of conn; Close on the returned
+// client is a no-op for the underlying connection.
+func NewSuiGrpcClientFromConn(conn *grpc.ClientConn) *SuiGrpcClient {
+	return &SuiGrpcClient{
+		conn: NewGrpcConnFromClientConn(conn),
+	}
+}
+
 func NewSuiGrpcClientWithAuth(target, token string, opts ...GrpcConnOption) *SuiGrpcClient {
 	authOpts := []GrpcConnOption{
 		WithDialOptions(

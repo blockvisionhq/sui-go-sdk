@@ -27,6 +27,7 @@ type GrpcConn struct {
 	retryCount int
 	timeout    time.Duration
 	dialOpts   []grpc.DialOption
+	external   bool
 }
 
 type GrpcConnOption func(*GrpcConn)
@@ -87,6 +88,18 @@ func NewGrpcConn(target string, opts ...GrpcConnOption) *GrpcConn {
 	return g
 }
 
+// NewGrpcConnFromClientConn wraps an externally-owned *grpc.ClientConn so callers
+// can reuse their own connection instead of letting the SDK dial one. The provided
+// conn's lifecycle stays with the caller: Close is a no-op on it.
+func NewGrpcConnFromClientConn(conn *grpc.ClientConn) *GrpcConn {
+	return &GrpcConn{
+		conn:       conn,
+		timeout:    defaultTimeout,
+		retryCount: defaultRetryCount,
+		external:   true,
+	}
+}
+
 func (g *GrpcConn) Connect(ctx context.Context) error {
 	g.mu.Lock()
 	defer g.mu.Unlock()
@@ -125,6 +138,12 @@ func (g *GrpcConn) GetConn(ctx context.Context) (*grpc.ClientConn, error) {
 func (g *GrpcConn) Close() error {
 	g.mu.Lock()
 	defer g.mu.Unlock()
+
+	if g.external {
+		// Externally-owned connection: caller owns its lifecycle, don't close it.
+		g.conn = nil
+		return nil
+	}
 
 	if g.conn != nil {
 		err := g.conn.Close()
