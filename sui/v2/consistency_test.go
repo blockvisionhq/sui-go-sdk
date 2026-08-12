@@ -510,6 +510,43 @@ func TestResponseConsistency(t *testing.T) {
 		assertResponseEqualEx(t, "GetTransaction", gr, jr, []string{"transaction.bcs"}, normalizeTxForCompare)
 	})
 
+	t.Run("BatchGetTransactions", func(t *testing.T) {
+		digests := []string{testTxDigest}
+		if raw := os.Getenv("TEST_TX_DIGESTS"); raw != "" {
+			digests = digests[:0]
+			for _, d := range strings.Split(raw, ",") {
+				if d = strings.TrimSpace(d); d != "" {
+					digests = append(digests, d)
+				}
+			}
+		}
+		opts := BatchGetTransactionsOptions{
+			Digests: digests,
+			Include: TransactionInclude{
+				Transaction:    true,
+				Effects:        true,
+				BalanceChanges: true,
+				Events:         true,
+				ObjectTypes:    true,
+				Bcs:            true,
+			},
+		}
+		gr, err1 := grpcClient.BatchGetTransactions(ctx, opts)
+		jr, err2 := jsonClient.BatchGetTransactions(ctx, opts)
+		if err1 != nil || err2 != nil {
+			t.Fatalf("BatchGetTransactions: grpc=%v json=%v", err1, err2)
+		}
+		if len(gr.Transactions) != len(jr.Transactions) {
+			t.Fatalf("BatchGetTransactions: length mismatch grpc=%d json=%d", len(gr.Transactions), len(jr.Transactions))
+		}
+		// Compare per-item: normalizeTxForCompare expects a TransactionResult shape,
+		// not the BatchGet envelope, so we run it for each TransactionOrError.
+		for i := range gr.Transactions {
+			name := "BatchGetTransactions[" + strconv.Itoa(i) + "]"
+			assertResponseEqualEx(t, name, gr.Transactions[i], jr.Transactions[i], []string{"transaction.bcs"}, normalizeTxForCompare)
+		}
+	})
+
 	t.Run("ListDynamicFields", func(t *testing.T) {
 		opts := ListDynamicFieldsOptions{ParentId: testParentId}
 		gr, err1 := grpcClient.ListDynamicFields(ctx, opts)

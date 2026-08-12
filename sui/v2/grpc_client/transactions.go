@@ -11,6 +11,7 @@ import (
 
 	v2proto "github.com/block-vision/sui-go-sdk/pb/sui/rpc/v2"
 	. "github.com/block-vision/sui-go-sdk/sui/v2/types"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/protobuf/types/known/fieldmaskpb"
 	"google.golang.org/protobuf/types/known/structpb"
 )
@@ -35,6 +36,65 @@ func (c *Client) GetTransaction(ctx context.Context, options GetTransactionOptio
 	}
 
 	return convertGrpcExecutedTxToResult(resp.Transaction, options.Include), nil
+}
+
+// BatchGetTransactions fetches multiple transactions by their digests in a single request.
+// The order of the returned Transactions matches the order of the request Digests.
+// Per-digest errors are returned as TransactionOrError.Error rather than aborting the batch.
+func (c *Client) BatchGetTransactions(ctx context.Context, options BatchGetTransactionsOptions) (*BatchGetTransactionsResponse, error) {
+	if len(options.Digests) == 0 {
+		return &BatchGetTransactionsResponse{Transactions: []TransactionOrError{}}, nil
+	}
+
+	ledgerService, err := c.grpcClient.LedgerService(ctx)
+	if err != nil {
+		return nil, wrapTransportError("BatchGetTransactions", "LedgerService", err)
+	}
+
+	paths := buildTxReadMaskPaths(options.Include)
+
+	// Process in batches of 50 to keep request size bounded, matching GetObjects.
+	const batchSize = 50
+	var all []TransactionOrError
+
+	for i := 0; i < len(options.Digests); i += batchSize {
+		end := i + batchSize
+		if end > len(options.Digests) {
+			end = len(options.Digests)
+		}
+		batch := options.Digests[i:end]
+
+		resp, err := ledgerService.BatchGetTransactions(ctx, &v2proto.BatchGetTransactionsRequest{
+			Digests:  batch,
+			ReadMask: &fieldmaskpb.FieldMask{Paths: paths},
+		})
+		if err != nil {
+			return nil, wrapTransportError("BatchGetTransactions", "BatchGetTransactions", err)
+		}
+
+		for _, r := range resp.GetTransactions() {
+			all = append(all, convertGrpcTransactionResult(r, options.Include))
+		}
+	}
+
+	return &BatchGetTransactionsResponse{Transactions: all}, nil
+}
+
+func convertGrpcTransactionResult(r *v2proto.GetTransactionResult, include TransactionInclude) TransactionOrError {
+	if r == nil {
+		msg := "transaction result is nil"
+		return TransactionOrError{Error: &msg}
+	}
+	if tx := r.GetTransaction(); tx != nil {
+		t := convertGrpcExecutedTxToTransaction(tx, include)
+		return TransactionOrError{Transaction: t}
+	}
+	if st := r.GetError(); st != nil {
+		msg := fmt.Sprintf("%s: %s", codes.Code(st.GetCode()).String(), st.GetMessage())
+		return TransactionOrError{Error: &msg}
+	}
+	msg := "unexpected transaction result"
+	return TransactionOrError{Error: &msg}
 }
 
 // ExecuteTransaction submits a signed transaction for execution.

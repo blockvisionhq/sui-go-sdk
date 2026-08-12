@@ -939,6 +939,26 @@ type SimulateTransactionOptions struct {
 	Include        SimulateTransactionInclude `json:"include,omitempty"`
 }
 
+// BatchGetTransactionsOptions is the request for BatchGetTransactions.
+type BatchGetTransactionsOptions struct {
+	Digests []string           `json:"digests"`
+	Include TransactionInclude `json:"include,omitempty"`
+}
+
+// BatchGetTransactionsResponse is the response for BatchGetTransactions.
+// The order of Transactions matches the order of Digests in the request.
+// Error entries represent transactions that could not be retrieved.
+type BatchGetTransactionsResponse struct {
+	Transactions []TransactionOrError `json:"transactions"`
+}
+
+// TransactionOrError holds either a successfully retrieved transaction or an
+// error message for that digest.
+type TransactionOrError struct {
+	Transaction *Transaction `json:"transaction,omitempty"`
+	Error       *string      `json:"error,omitempty"`
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // System state
 // ═══════════════════════════════════════════════════════════════════════════════
