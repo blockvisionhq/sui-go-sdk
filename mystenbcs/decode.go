@@ -169,21 +169,39 @@ func (d *Decoder) decodeString(v reflect.Value) (int, error) {
 		return n, nil
 	}
 
-	tmp := make([]byte, size)
-
-	read, err := d.reader.Read(tmp)
-	n += read
+	tmp, err := d.readSized(size)
 	if err != nil {
 		return n, err
 	}
-
-	if size != read {
-		return n, fmt.Errorf("wrong number of bytes read for string, want: %d, got %d", size, read)
-	}
+	n += size
 
 	v.SetString(string(tmp))
 
 	return n, nil
+}
+
+// readSized reads exactly size bytes from the reader.
+//
+// It guards against a malicious length prefix: BCS length fields are
+// attacker-controlled, and allocating make([]byte, size) up front lets a tiny
+// payload (a 5-byte ULEB128 length of ~2GB) exhaust memory before any data is
+// read — an unbounded-allocation DoS. When the reader can report how many bytes
+// remain (bytes.Reader / bytes.Buffer, which the public Unmarshal always uses),
+// reject an oversized size before allocating. For an opaque stream, read through
+// an io.LimitReader with io.ReadFull so a short read is a clean error rather than
+// a spurious "wrong number of bytes" and the buffer still can't outgrow size.
+func (d *Decoder) readSized(size int) ([]byte, error) {
+	if size < 0 {
+		return nil, fmt.Errorf("negative size %d", size)
+	}
+	if lr, ok := d.reader.(interface{ Len() int }); ok && size > lr.Len() {
+		return nil, fmt.Errorf("size %d exceeds %d remaining bytes", size, lr.Len())
+	}
+	tmp := make([]byte, size)
+	if _, err := io.ReadFull(d.reader, tmp); err != nil {
+		return nil, err
+	}
+	return tmp, nil
 }
 
 // readByte reads one byte from the input, error if no byte is read.
@@ -286,17 +304,11 @@ func (d *Decoder) decodeByteSlice(v reflect.Value) (int, error) {
 		return n, nil
 	}
 
-	tmp := make([]byte, size)
-
-	read, err := d.reader.Read(tmp)
-	n += read
+	tmp, err := d.readSized(size)
 	if err != nil {
 		return n, err
 	}
-
-	if size != read {
-		return n, fmt.Errorf("wrong number of bytes read for []byte, want: %d, got %d", size, read)
-	}
+	n += size
 
 	v.Set(reflect.ValueOf(tmp))
 
