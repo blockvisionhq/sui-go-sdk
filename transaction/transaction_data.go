@@ -232,8 +232,10 @@ type Publish struct {
 	Dependencies []models.SuiAddressBytes
 }
 
+// MakeMoveVec https://github.com/MystenLabs/sui/blob/fb27c6c7166f5e4279d5fd1b2ebc5580ca0e81b2/crates/sui-types/src/transaction.rs#L731
+// Type is an Option, it is nil when the vector holds objects.
 type MakeMoveVec struct {
-	Type     *string
+	Type     *string `bcs:"optional"`
 	Elements []*Argument
 }
 
