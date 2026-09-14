@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"testing"
 
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 
 	"github.com/block-vision/sui-go-sdk/mystenbcs"
@@ -20,4 +21,79 @@ func TestBcsUnmarshal(t *testing.T) {
 	genBz, err := txData.Marshal()
 	require.NoError(t, err)
 	require.Equal(t, txBz, genBz)
+}
+
+// TestMakeMoveVecBcs checks the Option tag byte of MakeMoveVec.Type. A vector of
+// objects carries no type and has to encode the None tag, otherwise every byte
+// after it is shifted.
+func TestMakeMoveVecBcs(t *testing.T) {
+	cases := []struct {
+		name    string
+		command Command
+		want    []byte
+	}{
+		{
+			name: "no type",
+			command: Command{MakeMoveVec: &MakeMoveVec{
+				Type:     nil,
+				Elements: []*Argument{{Input: lo.ToPtr(uint16(0))}, {Input: lo.ToPtr(uint16(1))}},
+			}},
+			want: []byte{0x05, 0x00, 0x02, 0x01, 0x00, 0x00, 0x01, 0x01, 0x00},
+		},
+		{
+			name: "with type",
+			command: Command{MakeMoveVec: &MakeMoveVec{
+				Type:     lo.ToPtr("u64"),
+				Elements: []*Argument{{Input: lo.ToPtr(uint16(0))}},
+			}},
+			want: []byte{0x05, 0x01, 0x03, 0x75, 0x36, 0x34, 0x01, 0x01, 0x00, 0x00},
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			bz, err := mystenbcs.Marshal(&c.command)
+			require.NoError(t, err)
+			require.Equal(t, c.want, bz)
+		})
+	}
+}
+
+// TestArgumentBcs pins the encoding of the Argument enum. Its variants are
+// pointers too, and they must keep carrying only the variant index.
+func TestArgumentBcs(t *testing.T) {
+	cases := []struct {
+		name     string
+		argument Argument
+		want     []byte
+	}{
+		{
+			name:     "gas coin",
+			argument: Argument{GasCoin: struct{}{}},
+			want:     []byte{0x00},
+		},
+		{
+			name:     "input",
+			argument: Argument{Input: lo.ToPtr(uint16(3))},
+			want:     []byte{0x01, 0x03, 0x00},
+		},
+		{
+			name:     "result",
+			argument: Argument{Result: lo.ToPtr(uint16(3))},
+			want:     []byte{0x02, 0x03, 0x00},
+		},
+		{
+			name:     "nested result",
+			argument: Argument{NestedResult: &NestedResult{Index: 1, ResultIndex: 2}},
+			want:     []byte{0x03, 0x01, 0x00, 0x02, 0x00},
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			bz, err := mystenbcs.Marshal(&c.argument)
+			require.NoError(t, err)
+			require.Equal(t, c.want, bz)
+		})
+	}
 }

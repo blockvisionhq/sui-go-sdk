@@ -86,10 +86,13 @@ func (e *Encoder) encode(v reflect.Value) error {
 		return binary.Write(e.w, binary.LittleEndian, v.Interface())
 
 	case reflect.Pointer: // pointer
-		// if v is nil pointer, use the zero value for v.
-		// we don't check for optional flag here.
-		// that should be checked when the container struct is encoded
-		// if this pointer is contained in a struct.
+		// bcs has no encoding for an absent value outside of an Option, so a nil
+		// pointer here would contribute no bytes at all and shift everything that
+		// follows it. the optional flag is what turns a pointer into an Option, and
+		// that is checked by encodeStruct before the field reaches this point.
+		if v.IsNil() {
+			return fmt.Errorf("nil pointer to %s cannot be encoded, consider marking the field optional to encode it as an Option", v.Type().Elem().String())
+		}
 		return e.encode(reflect.Indirect(v))
 
 	case reflect.Interface:
@@ -151,7 +154,10 @@ func (e *Encoder) encodeEnum(v reflect.Value) error {
 			if fieldKind == reflect.Pointer {
 				return e.encode(reflect.Indirect(field))
 			} else {
-				return e.encode(v)
+				// the variant index is already written, only the value the
+				// interface holds is left. an empty variant holds an empty
+				// struct and adds no further bytes.
+				return e.encode(field)
 			}
 		}
 	}
@@ -257,8 +263,9 @@ func (e *Encoder) encodeStruct(v reflect.Value) error {
 // Note that bcs doesn't have schema, and field names are irrelevant. The fields
 // of struct are serialized in the order that they are defined.
 //
-// Pointers are serialized as the type they point to. Nil pointers will be serialized
-// as zero value of the type they point to unless it's marked as `optional`.
+// Pointers are serialized as the type they point to. Nil pointers are an error
+// unless they are marked as `optional`, in which case they are serialized as the
+// `None` variant of an Option.
 //
 // Arrays are serialized as fixed length vector (or serialize the each object individually without prefixing
 // the length of the array).
