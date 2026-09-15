@@ -27,12 +27,10 @@ func parseZkLoginSignature(signature interface{}) (*ZkLoginSignature, error) {
 
 	// Deserialize the bytes into ZkLoginSignature struct using BCS
 	var zkSig ZkLoginSignature
-	numBytes, err := bcs.Unmarshal(bytes, &zkSig)
+	_, err = bcs.Unmarshal(bytes, &zkSig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse BCS data: %v", err)
 	}
-
-	fmt.Println("Number of bytes read:", numBytes)
 
 	return &zkSig, nil
 }

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/block-vision/sui-go-sdk/models"
+	"github.com/block-vision/sui-go-sdk/signer"
 	"github.com/google/go-cmp/cmp"
 	"github.com/mr-tron/base58"
 	"github.com/samber/lo"
@@ -140,6 +141,31 @@ func TestNewTransaction(t *testing.T) {
 
 			fmt.Println(bcs)
 		})
+	}
+}
+
+func TestSignerCompatibilityAndGenericKeypairSetters(t *testing.T) {
+	ed25519Signer := signer.NewSigner(make([]byte, 32))
+	tx := NewTransaction().SetSigner(ed25519Signer)
+	if tx.Signer != ed25519Signer {
+		t.Fatal("SetSigner() did not retain the legacy signer field")
+	}
+	if tx.KeypairSigner != nil {
+		t.Fatal("SetSigner() must not leave a stale generic signer")
+	}
+	replacement := signer.NewSigner(append(make([]byte, 31), 1))
+	tx.Signer = replacement
+	if tx.activeSigner() != replacement {
+		t.Fatal("direct updates to the legacy signer field must remain effective")
+	}
+
+	secp256k1Signer := signer.NewSecp256k1Signer(append(make([]byte, 31), 1))
+	tx.SetKeypairSigner(secp256k1Signer)
+	if tx.Signer != nil {
+		t.Fatal("a non-Ed25519 keypair must not be exposed through the legacy signer field")
+	}
+	if tx.KeypairSigner != secp256k1Signer {
+		t.Fatal("SetKeypairSigner() did not retain the generic signer")
 	}
 }
 

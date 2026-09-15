@@ -1,6 +1,23 @@
 package models
 
-import "testing"
+import (
+	"encoding/base64"
+	"testing"
+)
+
+func TestFromSerializedSignatureMultiSig(t *testing.T) {
+	serialized := base64.StdEncoding.EncodeToString([]byte{3, 1, 2, 3})
+	parsed, err := FromSerializedSignature(serialized)
+	if err != nil {
+		t.Fatalf("FromSerializedSignature() error = %v", err)
+	}
+	if parsed.SignatureScheme != "MultiSig" {
+		t.Fatalf("signature scheme = %s, want MultiSig", parsed.SignatureScheme)
+	}
+	if got, want := len(parsed.Signature), 3; got != want {
+		t.Fatalf("multisig payload length = %d, want %d", got, want)
+	}
+}
 
 func TestVerifyPersonalMessage(t *testing.T) {
 	type args struct {
